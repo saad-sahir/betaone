@@ -85,6 +85,8 @@ class Board:
         legal_moves = []
         if self.selected_piece:
             legal_moves = self._legal_moves(self.selected_piece, self.selected_piece_position)
+            # Highlight the current square of the selected piece
+            legal_moves.append(self.selected_piece_position)
 
         for row in range(8):
             for col in range(8):
@@ -92,7 +94,7 @@ class Board:
                 if (col, row) in legal_moves:
                     color = self.highlight_color
                 pygame.draw.rect(self.window, color, (col * self.square_size, row * self.square_size, self.square_size, self.square_size))
-
+                
     def draw_pieces(self):
         for row in range(8):
             for col in range(8):

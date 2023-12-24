@@ -75,7 +75,12 @@ class Pawn(Piece):
 
 
 class Rook(Piece):
+    def __init__(self, piece_char, square_size):
+        super().__init__(piece_char, square_size)
+        self.moved = False
+        
     def is_legal_move(self, start_pos, end_pos, board):
+
         start_col, start_row = start_pos
         end_col, end_row = end_pos
 
@@ -155,7 +160,7 @@ class Queen(Piece):
 class King(Piece):
     def __init__(self, piece_char, square_size):
         super().__init__(piece_char, square_size)
-        self.moved = False  # Track if the king has moved
+        self.moved = False
 
     def is_legal_move(self, start_pos, end_pos, board):
         start_col, start_row = start_pos
@@ -164,10 +169,43 @@ class King(Piece):
         row_diff = abs(start_row - end_row)
         col_diff = abs(start_col - end_col)
 
-        # Standard king move (one square in any direction)
+        # Standard king move
         if row_diff <= 1 and col_diff <= 1:
             destination_piece = board[end_row][end_col]
             if destination_piece is None or destination_piece.color != self.color:
                 return True
+
+        # Castling move
+        if not self.moved and row_diff == 0 and col_diff == 2:
+            direction = 1 if end_col > start_col else -1  # 1 for kingside, -1 for queenside
+            rook_col = 7 if direction == 1 else 0  # Rook's starting column for castling
+            rook = board[start_row][rook_col]
             
+            # Check if the rook is eligible for castling
+            if isinstance(rook, Rook) and not rook.moved:
+                # Check the squares between the king and the rook
+                if direction == 1:  # Kingside castling
+                    intermediate_squares = [5, 6]  # Squares the king will pass through
+                else:  # Queenside castling
+                    intermediate_squares = [1, 2, 3]  # Squares the king will pass through, including the destination square of the rook
+                    
+                # Check if the squares are empty and not under attack
+                for col in intermediate_squares:
+                    if board[start_row][col] is not None or self.is_square_under_attack((start_row, col), board):
+                        return False
+                    
+                # Additional check for queenside castling, the square next to the rook must also be empty, though king does not pass through it
+                if direction == -1 and board[start_row][1] is not None:
+                    return False
+
+                return True
+
+
+    def is_square_under_attack(self, position, board):
+        # Check if the position is under attack
+        for row in range(8):
+            for col in range(8):
+                piece = board[row][col]
+                if piece and piece.color != self.color and piece.is_legal_move((col, row), position, board):
+                    return True
         return False

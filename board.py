@@ -72,10 +72,20 @@ class Board:
             current_position = self.selected_piece_position
 
             if new_position != current_position and new_position in self._legal_moves(self.selected_piece, current_position):
+                # Castling move for king
+                if isinstance(self.selected_piece, King) and abs(current_position[0] - new_position[0]) == 2:
+                    direction = 1 if new_position[0] > current_position[0] else -1
+                    rook_col = 7 if direction == 1 else 0
+                    rook_new_col = 3 if direction == -1 else 5  # Rook's new position after castling
+                    self.board[y][rook_new_col] = self.board[y][rook_col]
+                    self.board[y][rook_col] = None
+                    self.board[y][rook_new_col].moved = True
+
                 # Perform the move
                 self.board[y][x] = self.selected_piece
                 self.board[current_position[1]][current_position[0]] = None
                 self.current_turn = 'b' if self.current_turn == 'w' else 'w'
+                self.selected_piece.moved = True
 
             # Deselect the piece
             self.selected_piece = None
@@ -233,7 +243,8 @@ class Board:
 
 if __name__ == "__main__":
     board = Board(
-        # fen="r2k2nr/p2p1p1p/n2BN3/1pbNP2P/6P1/3P4/P1P1K3/q7",
+        # fen="r2k2nr/p2p1p1p/n2BN3/1pbNP2P/6P1/3P4/P1P1K3/q7", # random
+        fen='r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R', # test castling
         # turn='b'
     )
     board.run()

@@ -67,48 +67,107 @@ class Pawn(Piece):
         if end_row == start_row + direction and abs(end_col - start_col) == 1:
             return piece_at_end is not None and piece_at_end.color != self.color
 
+        # En passant (optional, can be implemented as an additional feature)
+        # ...
+
         # If none of the above conditions are met, it's not a legal move
         return False
 
+
 class Rook(Piece):
     def is_legal_move(self, start_pos, end_pos, board):
-        # Simplified rook logic (not checking for obstructions)
-        start_row, start_col = start_pos
-        end_row, end_col = end_pos
+        start_col, start_row = start_pos
+        end_col, end_row = end_pos
 
-        return start_row == end_row or start_col == end_col
+        # Rook moves either vertically or horizontally
+        if start_row != end_row and start_col != end_col:
+            return False  # Not a straight line
+
+        # Check if any pieces are in the way
+        if start_row == end_row:  # Horizontal move
+            col_range = range(min(start_col, end_col) + 1, max(start_col, end_col))
+            for col in col_range:
+                if board[start_row][col] is not None:
+                    return False
+        else:  # Vertical move
+            row_range = range(min(start_row, end_row) + 1, max(start_row, end_row))
+            for row in row_range:
+                if board[row][start_col] is not None:
+                    return False
+
+        # If destination square is occupied, it must be an opponent's piece
+        destination_piece = board[end_row][end_col]
+        if destination_piece is not None and destination_piece.color == self.color:
+            return False
+
+        return True
+
 
 class Knight(Piece):
     def is_legal_move(self, start_pos, end_pos, board):
-        start_row, start_col = start_pos
-        end_row, end_col = end_pos
+        start_col, start_row = start_pos
+        end_col, end_row = end_pos
 
         row_diff = abs(start_row - end_row)
         col_diff = abs(start_col - end_col)
 
-        return (row_diff == 2 and col_diff == 1) or (row_diff == 1 and col_diff == 2)
+        # Knight moves in an L-shape: 2 squares in one direction and 1 square in the other
+        if not ((row_diff == 2 and col_diff == 1) or (row_diff == 1 and col_diff == 2)):
+            return False  # Not a valid knight move
+
+        # If destination square is occupied, it must not be a friendly piece
+        destination_piece = board[end_row][end_col]
+        if destination_piece is not None and destination_piece.color == self.color:
+            return False
+
+        return True
 
 class Bishop(Piece):
     def is_legal_move(self, start_pos, end_pos, board):
-        # Simplified bishop logic (not checking for obstructions)
-        start_row, start_col = start_pos
-        end_row, end_col = end_pos
+        start_col, start_row = start_pos
+        end_col, end_row = end_pos
 
-        return abs(start_row - end_row) == abs(start_col - end_col)
+        # Bishop moves diagonally
+        if abs(start_row - end_row) != abs(start_col - end_col):
+            return False  # Not a diagonal move
 
+        # Check if any pieces are in the way
+        row_step = 1 if end_row > start_row else -1
+        col_step = 1 if end_col > start_col else -1
+        for step in range(1, abs(end_row - start_row)):
+            row = start_row + step * row_step
+            col = start_col + step * col_step
+            if board[row][col] is not None:
+                return False
+
+        # If destination square is occupied, it must be an opponent's piece
+        destination_piece = board[end_row][end_col]
+        if destination_piece is not None and destination_piece.color == self.color:
+            return False
+
+        return True
+    
 class Queen(Piece):
     def is_legal_move(self, start_pos, end_pos, board):
         # Combines rook and bishop movement
         return Rook.is_legal_move(self, start_pos, end_pos, board) or Bishop.is_legal_move(self, start_pos, end_pos, board)
 
 class King(Piece):
+    def __init__(self, piece_char, square_size):
+        super().__init__(piece_char, square_size)
+        self.moved = False  # Track if the king has moved
+
     def is_legal_move(self, start_pos, end_pos, board):
-        # Simplified king logic (not including castling)
-        start_row, start_col = start_pos
-        end_row, end_col = end_pos
+        start_col, start_row = start_pos
+        end_col, end_row = end_pos
 
         row_diff = abs(start_row - end_row)
         col_diff = abs(start_col - end_col)
 
-        return row_diff <= 1 and col_diff <= 1
-
+        # Standard king move (one square in any direction)
+        if row_diff <= 1 and col_diff <= 1:
+            destination_piece = board[end_row][end_col]
+            if destination_piece is None or destination_piece.color != self.color:
+                return True
+            
+        return False

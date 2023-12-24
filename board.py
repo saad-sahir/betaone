@@ -3,6 +3,7 @@ import os
 from piece import Pawn, Rook, King, Knight, Queen, Bishop
 
 class Board:
+
     def __init__(self, fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", turn="w"):
         pygame.init()
         self.window_size = 600
@@ -11,7 +12,6 @@ class Board:
         self.white = (255, 211, 157)
         self.highlight_color = (255, 141, 0)
         self.window = pygame.display.set_mode((self.window_size, self.window_size))
-        self.pieces_images = self.load_all_piece_images()
         self.fen = fen
         self.board = [[None for _ in range(8)] for _ in range(8)]  # 8x8 grid for chess pieces
         self.set_positions_from_FEN(fen)
@@ -19,82 +19,13 @@ class Board:
         self.running = True
         self.current_turn = turn # 'w' for white, 'b' for black
 
-    def load_piece_image(self, file_name):
-        image = pygame.image.load(os.path.join('pieces', file_name))
-        return pygame.transform.scale(image, (self.square_size, self.square_size))
 
-    def load_all_piece_images(self):
-        pieces_images = {}
-        # Load pawns, rooks, knights, and bishops
-        for piece in ['p', 'r', 'n', 'b']:
-            for color in ['w', 'b']:
-                for i in range(1, 9):
-                    file_name = f'{color}{piece}.png'
-                    piece_key = f'{color}{piece}{i}'
-                    pieces_images[piece_key] = self.load_piece_image(file_name)
 
-        # Load kings and queens
-        for piece in ['k', 'q']:
-            for color in ['w', 'b']:
-                file_name = f'{color}{piece}.png'
-                piece_key = f'{color}{piece}'
-                pieces_images[piece_key] = self.load_piece_image(file_name)
-
-        return pieces_images
+    ## Helper Functions
 
     def pixel_to_board(self, x, y):
         return x // self.square_size, y // self.square_size
-
-    def run(self):
-        while self.running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    self.handle_mouse_click(event.pos)
-                    # print(self._toFEN())
-            
-            if self.is_checkmate(self.current_turn):
-                self.running = False
-
-            self.draw_board()
-            self.draw_pieces()
-            pygame.display.flip()
-            pygame.time.Clock().tick(60)
-        pygame.quit()
-
-    def handle_mouse_click(self, pos):
-        x, y = self.pixel_to_board(*pos)
-        clicked_square = self.board[y][x]
-
-        if self.selected_piece:
-            new_position = (x, y)
-            current_position = self.selected_piece_position
-
-            if new_position != current_position and new_position in self._legal_moves(self.selected_piece, current_position):
-                # Castling move for king
-                if isinstance(self.selected_piece, King) and abs(current_position[0] - new_position[0]) == 2:
-                    direction = 1 if new_position[0] > current_position[0] else -1
-                    rook_col = 7 if direction == 1 else 0
-                    rook_new_col = 3 if direction == -1 else 5  # Rook's new position after castling
-                    self.board[y][rook_new_col] = self.board[y][rook_col]
-                    self.board[y][rook_col] = None
-                    self.board[y][rook_new_col].moved = True
-
-                # Perform the move
-                self.board[y][x] = self.selected_piece
-                self.board[current_position[1]][current_position[0]] = None
-                self.current_turn = 'b' if self.current_turn == 'w' else 'w'
-                self.selected_piece.moved = True
-
-            # Deselect the piece
-            self.selected_piece = None
-
-        elif clicked_square and clicked_square.color == self.current_turn:
-            self.selected_piece = clicked_square
-            self.selected_piece_position = (x, y)
-            
-        
+    
     def draw_board(self):
         legal_moves = []
         if self.selected_piece:
@@ -160,40 +91,6 @@ class Board:
         # The FEN string should start with the rank 8 and end with rank 1 (board[0][0] is the a1 square)
         fen = '/'.join(fen_rows[::-1])
         return(fen)
-
-    def _legal_moves(self, piece, position):
-        legal_moves = []
-        is_king = piece.piece_type == 'k'
-
-        for row in range(8):
-            for col in range(8):
-                if piece.is_legal_move(position, (col, row), self.board):
-                    # Temporarily make the move
-                    original_piece = self.board[row][col]
-                    self.board[row][col] = piece
-                    self.board[position[1]][position[0]] = None
-
-                    # If the piece is a king, check for direct checks
-                    if is_king:
-                        in_check = any(
-                            opp_piece.is_legal_move((opp_x, opp_y), (col, row), self.board)
-                            for opp_y in range(8)
-                            for opp_x in range(8)
-                            if (opp_piece := self.board[opp_y][opp_x]) 
-                            and opp_piece.color != piece.color
-                        )
-                    else:
-                        in_check = self.is_in_check(piece.color)
-
-                    # If not in check, add to legal moves
-                    if not in_check:
-                        legal_moves.append((col, row))
-
-                    # Undo the move
-                    self.board[position[1]][position[0]] = piece
-                    self.board[row][col] = original_piece
-
-        return legal_moves
     
     def is_in_check(self, king_color):
         # Find the king's position
@@ -240,6 +137,117 @@ class Board:
                                 self.board[row][col] = temp_piece
                                 self.board[y][x] = piece
         return True
+    
+
+
+    
+    ## Legal moves
+
+    def _legal_moves(self, piece, position):
+        legal_moves = []
+        is_king = piece.piece_type == 'k'
+
+        for row in range(8):
+            for col in range(8):
+                if piece.is_legal_move(position, (col, row), self.board):
+                    # Temporarily make the move
+                    original_piece = self.board[row][col]
+                    self.board[row][col] = piece
+                    self.board[position[1]][position[0]] = None
+
+                    # If the piece is a king, check for direct checks
+                    if is_king:
+                        in_check = any(
+                            opp_piece.is_legal_move((opp_x, opp_y), (col, row), self.board)
+                            for opp_y in range(8)
+                            for opp_x in range(8)
+                            if (opp_piece := self.board[opp_y][opp_x]) 
+                            and opp_piece.color != piece.color
+                        )
+                    else:
+                        in_check = self.is_in_check(piece.color)
+
+                    # Additional Castling Logic for King
+                    if is_king and not piece.moved and not self.is_in_check(piece.color):
+                        # Check both sides for castling
+                        for direction in [1, -1]:
+                            rook_col = 7 if direction == 1 else 0
+                            rook = self.board[position[1]][rook_col]
+                            if isinstance(rook, Rook) and not rook.moved:
+                                # Check if path is clear
+                                path_clear = all(self.board[position[1]][position[0] + i * direction] is None 
+                                                for i in range(1, abs(rook_col - position[0])))
+                                if path_clear:
+                                    castling_move = (position[0] + 2 * direction, position[1])
+                                    legal_moves.append(castling_move)
+
+                    # If not in check, add to legal moves
+                    if not in_check:
+                        legal_moves.append((col, row))
+
+                    # Undo the move
+                    self.board[position[1]][position[0]] = piece
+                    self.board[row][col] = original_piece
+
+        return legal_moves
+    
+
+
+    ## Game loop
+
+    def run(self):
+        while self.running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    self.handle_mouse_click(event.pos)
+                    # print(self._toFEN())
+            
+            if self.is_checkmate(self.current_turn):
+                self.running = False
+
+            self.draw_board()
+            self.draw_pieces()
+            pygame.display.flip()
+            pygame.time.Clock().tick(60)
+        pygame.quit()
+
+        
+
+    ## Mouse Click Handler
+
+    def handle_mouse_click(self, pos):
+        x, y = self.pixel_to_board(*pos)
+        clicked_square = self.board[y][x]
+
+        if self.selected_piece:
+            new_position = (x, y)
+            current_position = self.selected_piece_position
+
+            if new_position != current_position and new_position in self._legal_moves(self.selected_piece, current_position):
+                # Castling move for king
+                if isinstance(self.selected_piece, King) and abs(current_position[0] - new_position[0]) == 2:
+                    direction = 1 if new_position[0] > current_position[0] else -1
+                    rook_col = 7 if direction == 1 else 0
+                    rook_new_col = 3 if direction == -1 else 5
+                    # Move rook for castling
+                    self.board[y][rook_new_col] = self.board[y][rook_col]
+                    self.board[y][rook_col] = None
+                    self.board[y][rook_new_col].moved = True
+
+                # Perform the move
+                self.board[y][x] = self.selected_piece
+                self.board[current_position[1]][current_position[0]] = None
+                self.current_turn = 'b' if self.current_turn == 'w' else 'w'
+                self.selected_piece.moved = True
+
+            # Deselect the piece
+            self.selected_piece = None
+
+        elif clicked_square and clicked_square.color == self.current_turn:
+            self.selected_piece = clicked_square
+            self.selected_piece_position = (x, y)
 
 if __name__ == "__main__":
     board = Board(

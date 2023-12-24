@@ -45,6 +45,9 @@ class Piece:
     def is_legal_move(self, start_pos, end_pos, board):
         # This method should be overridden in subclasses
         raise NotImplementedError
+    
+    def __repr__(self):
+        return self.piece_char
 
 class Pawn(Piece):
     def is_legal_move(self, start_pos, end_pos, board):
@@ -177,28 +180,36 @@ class King(Piece):
 
         # Castling move
         if not self.moved and row_diff == 0 and col_diff == 2:
-            direction = 1 if end_col > start_col else -1  # 1 for kingside, -1 for queenside
-            rook_col = 7 if direction == 1 else 0  # Rook's starting column for castling
+            if self.is_in_check(board):
+                return False  # Cannot castle while in check
+
+            direction = 1 if end_col > start_col else -1
+            rook_col = 7 if direction == 1 else 0
             rook = board[start_row][rook_col]
-            
+
             # Check if the rook is eligible for castling
             if isinstance(rook, Rook) and not rook.moved:
-                # Check the squares between the king and the rook
-                if direction == 1:  # Kingside castling
-                    intermediate_squares = [5, 6]  # Squares the king will pass through
-                else:  # Queenside castling
-                    intermediate_squares = [1, 2, 3]  # Squares the king will pass through, including the destination square of the rook
-                    
-                # Check if the squares are empty and not under attack
+                intermediate_squares = [start_col + i * direction for i in range(1, abs(end_col - start_col))]
                 for col in intermediate_squares:
-                    if board[start_row][col] is not None or self.is_square_under_attack((start_row, col), board):
+                    if self.is_square_under_attack((start_row, col), board):
                         return False
-                    
-                # Additional check for queenside castling, the square next to the rook must also be empty, though king does not pass through it
-                if direction == -1 and board[start_row][1] is not None:
-                    return False
 
                 return True
+
+        return False
+
+    def is_in_check(self, board):
+        # Check if the king is in check
+        king_position = None
+        for y in range(8):
+            for x in range(8):
+                if isinstance(board[y][x], King) and board[y][x].color == self.color:
+                    king_position = (x, y)
+                    break
+            if king_position:
+                break
+
+        return self.is_square_under_attack(king_position, board)
 
 
     def is_square_under_attack(self, position, board):

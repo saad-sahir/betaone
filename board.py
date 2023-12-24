@@ -3,7 +3,7 @@ import os
 from piece import Pawn, Rook, King, Knight, Queen, Bishop
 
 class Board:
-    def __init__(self, fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"):
+    def __init__(self, fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", turn="w"):
         pygame.init()
         self.window_size = 600
         self.square_size = self.window_size // 8
@@ -17,6 +17,7 @@ class Board:
         self.set_positions_from_FEN(fen)
         self.selected_piece = None
         self.running = True
+        self.current_turn = turn # 'w' for white, 'b' for black
 
     def load_piece_image(self, file_name):
         image = pygame.image.load(os.path.join('pieces', file_name))
@@ -51,6 +52,10 @@ class Board:
                     self.running = False
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self.handle_mouse_click(event.pos)
+                    # print(self._toFEN())
+            
+            if self.is_checkmate(self.current_turn):
+                self.running = False
 
             self.draw_board()
             self.draw_pieces()
@@ -66,21 +71,20 @@ class Board:
             new_position = (x, y)
             current_position = self.selected_piece_position
 
-            # Check if the new position is different from the current position
-            if new_position != current_position:
-                if self.selected_piece.is_legal_move(current_position, new_position, self.board):
-                    # Move the piece
-                    self.board[y][x] = self.selected_piece
-                    self.board[current_position[1]][current_position[0]] = None
+            if new_position != current_position and new_position in self._legal_moves(self.selected_piece, current_position):
+                # Perform the move
+                self.board[y][x] = self.selected_piece
+                self.board[current_position[1]][current_position[0]] = None
+                self.current_turn = 'b' if self.current_turn == 'w' else 'w'
 
-            # Deselect the piece after the move or if clicked on the same square
+            # Deselect the piece
             self.selected_piece = None
 
-        elif clicked_square:
+        elif clicked_square and clicked_square.color == self.current_turn:
             self.selected_piece = clicked_square
             self.selected_piece_position = (x, y)
-
-
+            
+        
     def draw_board(self):
         legal_moves = []
         if self.selected_piece:
@@ -94,7 +98,7 @@ class Board:
                 if (col, row) in legal_moves:
                     color = self.highlight_color
                 pygame.draw.rect(self.window, color, (col * self.square_size, row * self.square_size, self.square_size, self.square_size))
-                
+
     def draw_pieces(self):
         for row in range(8):
             for col in range(8):
@@ -117,8 +121,7 @@ class Board:
                     self.board[row_index][col_index] = piece_classes[piece_type](char, self.square_size)
                     col_index += 1
 
-    def _printFEN(self):
-        # Mapping from piece codes to FEN characters
+    def _toFEN(self):
         piece_to_fen = {
             'br': 'r', 'bn': 'n', 'bb': 'b', 'bq': 'q', 'bk': 'k', 'bp': 'p',
             'wr': 'R', 'wn': 'N', 'wb': 'B', 'wq': 'Q', 'wk': 'K', 'wp': 'P'
@@ -129,36 +132,108 @@ class Board:
             empty_squares = 0
             fen_row = ''
             for col in range(8):
-                piece_found = False
-                for piece, position in self.initial_positions.items():
-                    if position == (col, row):  # Invert row to start from bottom
-                        if empty_squares > 0:
-                            fen_row += str(empty_squares)
-                            empty_squares = 0
-                        piece_code = piece if piece in ['bq', 'bk', 'wq', 'wk'] else piece[:-1]
-                        fen_row += piece_to_fen[piece_code]
-                        piece_found = True
-                        break
-                if not piece_found:
+                piece = self.board[row][col]
+                if piece is None:
                     empty_squares += 1
+                else:
+                    if empty_squares > 0:
+                        fen_row += str(empty_squares)
+                        empty_squares = 0
+                    # Construct the key for the piece_to_fen dictionary
+                    piece_key = piece.color + piece.piece_type
+                    fen_character = piece_to_fen[piece_key]
+                    fen_row += fen_character.upper() if piece.color == 'w' else fen_character.lower()
             if empty_squares > 0:
                 fen_row += str(empty_squares)
             fen_rows.append(fen_row)
 
-        fen = '/'.join(fen_rows)
-        print(fen)
+        # The FEN string should start with the rank 8 and end with rank 1 (board[0][0] is the a1 square)
+        fen = '/'.join(fen_rows[::-1])
+        return(fen)
 
     def _legal_moves(self, piece, position):
         legal_moves = []
+        is_king = piece.piece_type == 'k'
+
         for row in range(8):
             for col in range(8):
                 if piece.is_legal_move(position, (col, row), self.board):
-                    legal_moves.append((col, row))
+                    # Temporarily make the move
+                    original_piece = self.board[row][col]
+                    self.board[row][col] = piece
+                    self.board[position[1]][position[0]] = None
+
+                    # If the piece is a king, check for direct checks
+                    if is_king:
+                        in_check = any(
+                            opp_piece.is_legal_move((opp_x, opp_y), (col, row), self.board)
+                            for opp_y in range(8)
+                            for opp_x in range(8)
+                            if (opp_piece := self.board[opp_y][opp_x]) 
+                            and opp_piece.color != piece.color
+                        )
+                    else:
+                        in_check = self.is_in_check(piece.color)
+
+                    # If not in check, add to legal moves
+                    if not in_check:
+                        legal_moves.append((col, row))
+
+                    # Undo the move
+                    self.board[position[1]][position[0]] = piece
+                    self.board[row][col] = original_piece
+
         return legal_moves
     
+    def is_in_check(self, king_color):
+        # Find the king's position
+        king_position = None
+        for y in range(8):
+            for x in range(8):
+                piece = self.board[y][x]
+                if piece and piece.color == king_color and piece.piece_type == 'k':
+                    king_position = (x, y)
+                    break
+            if king_position:
+                break
+
+        # Check if any opponent's piece can attack the king
+        opponent_color = 'b' if king_color == 'w' else 'w'
+        for y in range(8):
+            for x in range(8):
+                piece = self.board[y][x]
+                if piece and piece.color == opponent_color:
+                    if piece.is_legal_move((x, y), king_position, self.board):
+                        return True
+        return False
+    
+    def is_checkmate(self, king_color):
+        if not self.is_in_check(king_color):
+            return False
+        # Check if any move can remove the check
+        for y in range(8):
+            for x in range(8):
+                piece = self.board[y][x]
+                if piece and piece.color == king_color:
+                    for row in range(8):
+                        for col in range(8):
+                            if piece.is_legal_move((x, y), (col, row), self.board):
+                                self.board[y][x] = None
+                                temp_piece = self.board[row][col]
+                                self.board[row][col] = piece
+                                if not self.is_in_check(king_color):
+                                    # Undo move
+                                    self.board[row][col] = temp_piece
+                                    self.board[y][x] = piece
+                                    return False
+                                # Undo move
+                                self.board[row][col] = temp_piece
+                                self.board[y][x] = piece
+        return True
+
 if __name__ == "__main__":
     board = Board(
-        # fen="r2k2nr/p2p1p1p/n2BN3/1pbNP2P/6P1/3P4/P1P1K3/q7"
+        # fen="r2k2nr/p2p1p1p/n2BN3/1pbNP2P/6P1/3P4/P1P1K3/q7",
+        # turn='b'
     )
     board.run()
-    board._printFEN()

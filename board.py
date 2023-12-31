@@ -1,52 +1,19 @@
 import pygame
 import os
 from piece import Pawn, Rook, King, Knight, Queen, Bishop
-from eval import getFEN
 
 class Board:
 
     def __init__(self, fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", turn="w", print=False):
         pygame.init()
         self._print = print
-        self.window_size = 600
-        self.square_size = self.window_size // 8
-        self.black = (128, 70, 0)
-        self.white = (255, 211, 157)
-        self.highlight_color = (255, 141, 0)
-        self.window = pygame.display.set_mode((self.window_size, self.window_size))
         self.current_turn = turn # 'w' for white, 'b' for black
         self.fen = fen
         self.board = [[None for _ in range(8)] for _ in range(8)]  # 8x8 grid for chess pieces
         self.set_positions_from_FEN(fen)
-        self.selected_piece = None
-        self.running = True
-
+        self.selected_piece = None 
 
     ## Helper Functions
-
-    def pixel_to_board(self, x, y):
-        return x // self.square_size, y // self.square_size
-    
-    def draw_board(self):
-        legal_moves = []
-        if self.selected_piece:
-            legal_moves = self._legal_moves(self.selected_piece, self.selected_piece_position)
-            # Highlight the current square of the selected piece
-            legal_moves.append(self.selected_piece_position)
-
-        for row in range(8):
-            for col in range(8):
-                color = self.white if (row + col) % 2 == 0 else self.black
-                if (col, row) in legal_moves:
-                    color = self.highlight_color
-                pygame.draw.rect(self.window, color, (col * self.square_size, row * self.square_size, self.square_size, self.square_size))
-
-    def draw_pieces(self):
-        for row in range(8):
-            for col in range(8):
-                piece = self.board[row][col]
-                if piece:
-                    self.window.blit(piece.image, (col * self.square_size, row * self.square_size))
 
     def set_positions_from_FEN(self, fen):
         # Initialize board with Piece instances based on FEN string
@@ -58,9 +25,8 @@ class Board:
                 if char.isdigit():
                     col_index += int(char)
                 else:
-                    color = 'w' if char.isupper() else 'b'
                     piece_type = char.lower()
-                    self.board[row_index][col_index] = piece_classes[piece_type](char, self.square_size)
+                    self.board[row_index][col_index] = piece_classes[piece_type](char)
                     col_index += 1
 
     def _toFEN(self):
@@ -199,84 +165,13 @@ class Board:
                     self.board[row][col] = original_piece
 
         return legal_moves
-    
-
-
-    ## Game loop
-
-    def run(self):
-        while self.running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    self.handle_mouse_click(event.pos)
-                    self.fen = self._toFEN()
-                    # print(self.fen)
-                    getFEN(self.fen, _print=self._print)
-            
-            if self.is_checkmate(self.current_turn):
-                self.running = False
-
-            self.draw_board()
-            self.draw_pieces()
-            pygame.display.flip()
-            pygame.time.Clock().tick(60)
-        pygame.quit()
-
-        
-
-    ## Mouse Click Handler
-
-    def handle_mouse_click(self, pos):
-        x, y = self.pixel_to_board(*pos)
-        clicked_square = self.board[y][x]
-
-        if self.selected_piece:
-            new_position = (x, y)
-            current_position = self.selected_piece_position
-
-            if new_position != current_position and new_position in self._legal_moves(self.selected_piece, current_position):
-                # Perform the move for non-promotion cases
-                self.board[current_position[1]][current_position[0]] = None
-
-                # Pawn promotion to queen
-                if self.is_pawn_promotion(self.selected_piece, new_position):
-                    promotion_piece = Queen('Q' if self.selected_piece.color == 'w' else 'q', self.square_size)
-                    promotion_piece.color = self.selected_piece.color
-                    self.board[y][x] = promotion_piece
-                else:
-                    self.board[y][x] = self.selected_piece
-                
-                    # Castling move for king
-                    if isinstance(self.selected_piece, King) and abs(current_position[0] - new_position[0]) == 2:
-                        direction = 1 if new_position[0] > current_position[0] else -1
-                        rook_col = 7 if direction == 1 else 0
-                        rook_new_col = 3 if direction == -1 else 5
-                        # Move rook for castling
-                        self.board[y][rook_new_col] = self.board[y][rook_col]
-                        self.board[y][rook_col] = None
-                        self.board[y][rook_new_col].moved = True
-
-                # Update turn
-                self.fen = self._toFEN()
-                self.current_turn = 'b' if self.current_turn == 'w' else 'w'
-                self.selected_piece.moved = True
-
-            # Deselect the piece
-            self.selected_piece = None
-
-        elif clicked_square and clicked_square.color == self.current_turn:
-            self.selected_piece = clicked_square
-            self.selected_piece_position = (x, y)
 
 if __name__ == "__main__":
     board = Board(
         # fen="r2k2nr/p2p1p1p/n2BN3/1pbNP2P/6P1/3P4/P1P1K3/q7", # random
-        fen = "4r1r1/p1p2p1p/2k2p2/2p5/4PP2/P1N3P1/2P4P/2KRR3", # random2
+        # fen = "4r1r1/p1p2p1p/2k2p2/2p5/4PP2/P1N3P1/2P4P/2KRR3", # random2
         # fen='r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R', # test castling
         # fen='k7/7P/8/8/8/8/7p/K7', # test promotion
         # turn='b',
         # print=True
     )
-    board.run()

@@ -27,17 +27,11 @@ piece_val = { # takes in lower(piece) as input
 }
 
 class Piece:
-    def __init__(self, piece_char, square_size):
+    def __init__(self, piece_char):
         self.piece_char = piece_char
         self.color = 'w' if piece_char.isupper() else 'b'
         self.piece_type = piece_char.lower()
-        self.image = self.load_image(square_size)
         self.value = self.set_value()
-
-    def load_image(self, square_size):
-        file_name = fen_to_piece[self.piece_char] + '.png'
-        image_path = os.path.join('pieces', file_name)
-        return pygame.transform.scale(pygame.image.load(image_path), (square_size, square_size))
 
     def set_value(self):
         return piece_val[self.piece_type]
@@ -78,8 +72,8 @@ class Pawn(Piece):
 
 
 class Rook(Piece):
-    def __init__(self, piece_char, square_size):
-        super().__init__(piece_char, square_size)
+    def __init__(self, piece_char):
+        super().__init__(piece_char)
         self.moved = False
         
     def is_legal_move(self, start_pos, end_pos, board):
@@ -161,8 +155,8 @@ class Queen(Piece):
         return Rook.is_legal_move(self, start_pos, end_pos, board) or Bishop.is_legal_move(self, start_pos, end_pos, board)
 
 class King(Piece):
-    def __init__(self, piece_char, square_size):
-        super().__init__(piece_char, square_size)
+    def __init__(self, piece_char):
+        super().__init__(piece_char)
         self.moved = False
 
     def is_legal_move(self, start_pos, end_pos, board):

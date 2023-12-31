@@ -115,5 +115,12 @@ def pixel_to_board(pos, square_size):
     return x // square_size, y // square_size
 
 if __name__ == "__main__":
-    board = Board()
+    board = Board(
+        # fen="r2k2nr/p2p1p1p/n2BN3/1pbNP2P/6P1/3P4/P1P1K3/q7", # random
+        # fen = "4r1r1/p1p2p1p/2k2p2/2p5/4PP2/P1N3P1/2P4P/2KRR3", # random2
+        fen='r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R', # test castling
+        # fen='k7/7P/8/8/8/8/7p/K7', # test promotion
+        # turn='b',
+        # print=True
+    )
     run_game(board)

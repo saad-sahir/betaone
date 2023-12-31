@@ -110,7 +110,15 @@ class Board:
             return True
         return False
 
-
+    def is_square_under_attack(self, position, color):
+        opponent_color = 'w' if color == 'b' else 'b'
+        for row in range(8):
+            for col in range(8):
+                piece = self.board[row][col]
+                if piece and piece.color == opponent_color:
+                    if piece.is_legal_move((col, row), position, self.board):
+                        return True
+        return False
     
     ## Legal moves
 
@@ -145,12 +153,14 @@ class Board:
                             rook_col = 7 if direction == 1 else 0
                             rook = self.board[position[1]][rook_col]
                             if isinstance(rook, Rook) and not rook.moved:
-                                # Check if path is clear
                                 path_clear = all(self.board[position[1]][position[0] + i * direction] is None 
                                                 for i in range(1, abs(rook_col - position[0])))
                                 if path_clear:
-                                    castling_move = (position[0] + 2 * direction, position[1])
-                                    legal_moves.append(castling_move)
+                                    # Check if the king passes through an attacked square
+                                    squares_to_check = [(position[0] + i * direction, position[1]) for i in range(1, 3)]
+                                    if all(not self.is_square_under_attack(square, piece.color) for square in squares_to_check):
+                                        castling_move = (position[0] + 2 * direction, position[1])
+                                        legal_moves.append(castling_move)
 
                     # Pawn promotion logic
                     if isinstance(piece, Pawn) and (row == 0 or row == 7):
@@ -167,11 +177,4 @@ class Board:
         return legal_moves
 
 if __name__ == "__main__":
-    board = Board(
-        # fen="r2k2nr/p2p1p1p/n2BN3/1pbNP2P/6P1/3P4/P1P1K3/q7", # random
-        # fen = "4r1r1/p1p2p1p/2k2p2/2p5/4PP2/P1N3P1/2P4P/2KRR3", # random2
-        # fen='r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R', # test castling
-        # fen='k7/7P/8/8/8/8/7p/K7', # test promotion
-        # turn='b',
-        # print=True
-    )
+    board = Board()

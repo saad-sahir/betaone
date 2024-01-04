@@ -1,5 +1,4 @@
 import numpy as np
-import pygame
 import os
 
 fen_to_piece = {
@@ -184,7 +183,7 @@ class King(Piece):
 
         # Castling move
         if not self.moved and row_diff == 0 and col_diff == 2:
-            if self.is_in_check(board):
+            if self.is_in_check(board, last_move):
                 return False  # Cannot castle while in check
 
             direction = 1 if end_col > start_col else -1
@@ -195,14 +194,14 @@ class King(Piece):
             if isinstance(rook, Rook) and not rook.moved:
                 intermediate_squares = [start_col + i * direction for i in range(1, abs(end_col - start_col))]
                 for col in intermediate_squares:
-                    if self.is_square_under_attack((start_row, col), board):
+                    if self.is_square_under_attack((start_row, col), board, last_move):
                         return False
 
                 return True
 
         return False
 
-    def is_in_check(self, board):
+    def is_in_check(self, board, last_move):
         # Check if the king is in check
         king_position = None
         for y in range(8):
@@ -213,14 +212,14 @@ class King(Piece):
             if king_position:
                 break
 
-        return self.is_square_under_attack(king_position, board)
+        return self.is_square_under_attack(king_position, board, last_move)
 
 
-    def is_square_under_attack(self, position, board):
+    def is_square_under_attack(self, position, board, last_move):
         # Check if the position is under attack
         for row in range(8):
             for col in range(8):
                 piece = board[row][col]
-                if piece and piece.color != self.color and piece.is_legal_move((col, row), position, board):
+                if piece and piece.color != self.color and piece.is_legal_move((col, row), position, board, last_move):
                     return True
         return False

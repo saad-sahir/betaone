@@ -54,7 +54,7 @@ def run_game(board):
 def draw_board(board, window, square_size, white, black, highlight_color, piece_images):
     legal_moves = []
     if board.selected_piece:
-        legal_moves = board._legal_moves(board.selected_piece, board.selected_piece_position)
+        legal_moves = board.legal_moves(board.selected_piece, board.selected_piece_position)
         legal_moves.append(board.selected_piece_position)
 
     for row in range(8):
@@ -76,7 +76,7 @@ def handle_mouse_click(pos, board, _, square_size):
         new_position = (x, y)
         current_position = board.selected_piece_position
 
-        if new_position != current_position and new_position in board._legal_moves(board.selected_piece, current_position):
+        if new_position != current_position and new_position in board.legal_moves(board.selected_piece, current_position):
             # Perform the move for non-promotion cases
             moving_piece = board.selected_piece
             board.board[current_position[1]][current_position[0]] = None
@@ -134,11 +134,13 @@ def pixel_to_board(pos, square_size):
 
 if __name__ == "__main__":
     board = Board(
-        # fen="r2k2nr/p2p1p1p/n2BN3/1pbNP2P/6P1/3P4/P1P1K3/q7", # random
+        fen="r2k2nr/p2p1p1p/n2BN3/1pbNP2P/6P1/3P4/P1P1K3/q7", # random
         # fen = "4r1r1/p1p2p1p/2k2p2/2p5/4PP2/P1N3P1/2P4P/2KRR3", # random2
         # fen='r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R', # test castling
         # fen='k7/7P/8/8/8/8/7p/K7', # test promotion
-        # turn='b',
-        # print=True
+        # fen="8/p2K1p2/3bB3/1P6/p1R1p2p/rP6/2P1p2P/3k4" # r1 (-6.5)
+        # fen='7K/1n6/2k3P1/8/4Pp2/4Bp2/1P3P2/8' # r2 (#13w)
+        # fen='8/p4p2/3KP1b1/7k/6p1/8/4Q1P1/7q' # r3 (0.0)
+        turn='b',
     )
     run_game(board)

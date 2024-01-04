@@ -1,4 +1,3 @@
-import pygame
 import os
 from piece import Pawn, Rook, King, Knight, Queen, Bishop
 
@@ -116,7 +115,7 @@ class Board:
             for col in range(8):
                 piece = self.board[row][col]
                 if piece and piece.color == opponent_color:
-                    if piece.is_legal_move((col, row), position, self.board):
+                    if piece.is_legal_move((col, row), position, self.board, self.last_move):
                         return True
         return False
     
@@ -125,7 +124,7 @@ class Board:
 
     ## Legal moves
 
-    def _legal_moves(self, piece, position):
+    def legal_moves(self, piece, position):
         legal_moves = []
         is_king = piece.piece_type == 'k'
 
@@ -140,7 +139,7 @@ class Board:
                     # If the piece is a king, check for direct checks
                     if is_king:
                         in_check = any(
-                            opp_piece.is_legal_move((opp_x, opp_y), (col, row), self.board)
+                            opp_piece.is_legal_move((opp_x, opp_y), (col, row), self.board, self.last_move)
                             for opp_y in range(8)
                             for opp_x in range(8)
                             if (opp_piece := self.board[opp_y][opp_x]) 

@@ -36,7 +36,7 @@ class Piece:
     def set_value(self):
         return piece_val[self.piece_type]
 
-    def is_legal_move(self, start_pos, end_pos, board):
+    def is_legal_move(self, start_pos, end_pos, board, last_move):
         # This method should be overridden in subclasses
         raise NotImplementedError
     
@@ -44,7 +44,7 @@ class Piece:
         return self.piece_char
 
 class Pawn(Piece):
-    def is_legal_move(self, start_pos, end_pos, board):
+    def is_legal_move(self, start_pos, end_pos, board, last_move):
         direction = -1 if self.color == 'w' else 1
         start_col, start_row = start_pos
         end_col, end_row = end_pos
@@ -63,9 +63,19 @@ class Pawn(Piece):
         # Check for a diagonal capture
         if end_row == start_row + direction and abs(end_col - start_col) == 1:
             return piece_at_end is not None and piece_at_end.color != self.color
+        
+        # En passant logic
+        if last_move and last_move['piece'].piece_type.lower() == 'p':
+            # Check if the pawn is in the correct rank
+            if (self.color == 'w' and start_row == 3) or (self.color == 'b' and start_row == 4):
+                # Check if it's a diagonal move to an empty square
+                if abs(end_col - start_col) == 1 and end_row == start_row + direction and not piece_at_end:
+                    # Check if the last move was a two-square move
+                    _, last_start_row = last_move['start_pos']
+                    last_end_col, last_end_row = last_move['end_pos']
+                    if abs(last_start_row - last_end_row) == 2 and last_end_col == end_col:
+                        return True
 
-        # En passant (optional, can be implemented as an additional feature)
-        # ...
 
         # If none of the above conditions are met, it's not a legal move
         return False
@@ -76,7 +86,7 @@ class Rook(Piece):
         super().__init__(piece_char)
         self.moved = False
         
-    def is_legal_move(self, start_pos, end_pos, board):
+    def is_legal_move(self, start_pos, end_pos, board, last_move):
 
         start_col, start_row = start_pos
         end_col, end_row = end_pos
@@ -106,7 +116,7 @@ class Rook(Piece):
 
 
 class Knight(Piece):
-    def is_legal_move(self, start_pos, end_pos, board):
+    def is_legal_move(self, start_pos, end_pos, board, last_move):
         start_col, start_row = start_pos
         end_col, end_row = end_pos
 
@@ -125,7 +135,7 @@ class Knight(Piece):
         return True
 
 class Bishop(Piece):
-    def is_legal_move(self, start_pos, end_pos, board):
+    def is_legal_move(self, start_pos, end_pos, board, last_move):
         start_col, start_row = start_pos
         end_col, end_row = end_pos
 
@@ -150,16 +160,16 @@ class Bishop(Piece):
         return True
     
 class Queen(Piece):
-    def is_legal_move(self, start_pos, end_pos, board):
+    def is_legal_move(self, start_pos, end_pos, board, last_move):
         # Combines rook and bishop movement
-        return Rook.is_legal_move(self, start_pos, end_pos, board) or Bishop.is_legal_move(self, start_pos, end_pos, board)
+        return Rook.is_legal_move(self, start_pos, end_pos, board, last_move) or Bishop.is_legal_move(self, start_pos, end_pos, board, last_move)
 
 class King(Piece):
     def __init__(self, piece_char):
         super().__init__(piece_char)
         self.moved = False
 
-    def is_legal_move(self, start_pos, end_pos, board):
+    def is_legal_move(self, start_pos, end_pos, board, last_move):
         start_col, start_row = start_pos
         end_col, end_row = end_pos
 

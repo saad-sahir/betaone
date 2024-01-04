@@ -78,30 +78,47 @@ def handle_mouse_click(pos, board, _, square_size):
 
         if new_position != current_position and new_position in board._legal_moves(board.selected_piece, current_position):
             # Perform the move for non-promotion cases
+            moving_piece = board.selected_piece
             board.board[current_position[1]][current_position[0]] = None
 
+            # En passant capture logic
+            if isinstance(moving_piece, Pawn):
+                if abs(current_position[1] - new_position[1]) == 1 and current_position[0] != new_position[0] and not clicked_square:
+                    capture_row = current_position[1] if moving_piece.color == 'w' else new_position[1]
+                    board.board[capture_row][new_position[0]] = None  # Remove the captured pawn
+
+            # Place the moving piece in the new position
+            board.board[y][x] = moving_piece
+
             # Pawn promotion to queen
-            if board.is_pawn_promotion(board.selected_piece, new_position):
-                promotion_piece = Queen('Q' if board.selected_piece.color == 'w' else 'q', square_size)
-                promotion_piece.color = board.selected_piece.color
+            if board.is_pawn_promotion(moving_piece, new_position):
+                promotion_piece = Queen('Q' if moving_piece.color == 'w' else 'q')
+                promotion_piece.color = moving_piece.color
                 board.board[y][x] = promotion_piece
             else:
-                board.board[y][x] = board.selected_piece
+                board.board[y][x] = moving_piece
             
-                # Castling move for king
-                if isinstance(board.selected_piece, King) and abs(current_position[0] - new_position[0]) == 2:
-                    direction = 1 if new_position[0] > current_position[0] else -1
-                    rook_col = 7 if direction == 1 else 0
-                    rook_new_col = 3 if direction == -1 else 5
-                    # Move rook for castling
-                    board.board[y][rook_new_col] = board.board[y][rook_col]
-                    board.board[y][rook_col] = None
-                    board.board[y][rook_new_col].moved = True
+            # Castling move for king
+            if isinstance(moving_piece, King) and abs(current_position[0] - new_position[0]) == 2:
+                direction = 1 if new_position[0] > current_position[0] else -1
+                rook_col = 7 if direction == 1 else 0
+                rook_new_col = 3 if direction == -1 else 5
+                # Move rook for castling
+                board.board[y][rook_new_col] = board.board[y][rook_col]
+                board.board[y][rook_col] = None
+                board.board[y][rook_new_col].moved = True
+
+            # Update last move
+            board.update_last_move(moving_piece, current_position, new_position)
 
             # Update turn
             board.fen = board._toFEN()
             board.current_turn = 'b' if board.current_turn == 'w' else 'w'
             board.selected_piece.moved = True
+
+            # Debug
+            print(board.last_move)
+            print(board.fen)
 
         # Deselect the piece
         board.selected_piece = None
@@ -109,6 +126,7 @@ def handle_mouse_click(pos, board, _, square_size):
     elif clicked_square and clicked_square.color == board.current_turn:
         board.selected_piece = clicked_square
         board.selected_piece_position = (x, y)
+
 
 def pixel_to_board(pos, square_size):
     x, y = pos
@@ -118,7 +136,7 @@ if __name__ == "__main__":
     board = Board(
         # fen="r2k2nr/p2p1p1p/n2BN3/1pbNP2P/6P1/3P4/P1P1K3/q7", # random
         # fen = "4r1r1/p1p2p1p/2k2p2/2p5/4PP2/P1N3P1/2P4P/2KRR3", # random2
-        fen='r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R', # test castling
+        # fen='r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R', # test castling
         # fen='k7/7P/8/8/8/8/7p/K7', # test promotion
         # turn='b',
         # print=True

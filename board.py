@@ -5,13 +5,13 @@ from piece import Pawn, Rook, King, Knight, Queen, Bishop
 class Board:
 
     def __init__(self, fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", turn="w", print=False):
-        pygame.init()
         self._print = print
         self.current_turn = turn # 'w' for white, 'b' for black
         self.fen = fen
         self.board = [[None for _ in range(8)] for _ in range(8)]  # 8x8 grid for chess pieces
         self.set_positions_from_FEN(fen)
         self.selected_piece = None 
+        self.last_move = None
 
     ## Helper Functions
 
@@ -77,7 +77,7 @@ class Board:
             for x in range(8):
                 piece = self.board[y][x]
                 if piece and piece.color == opponent_color:
-                    if piece.is_legal_move((x, y), king_position, self.board):
+                    if piece.is_legal_move((x, y), king_position, self.board, self.last_move):
                         return True
         return False
     
@@ -120,6 +120,9 @@ class Board:
                         return True
         return False
     
+    def update_last_move(self, piece, start_pos, end_pos):
+        self.last_move = {'piece': piece, 'start_pos': start_pos, 'end_pos': end_pos}
+
     ## Legal moves
 
     def _legal_moves(self, piece, position):
@@ -128,7 +131,7 @@ class Board:
 
         for row in range(8):
             for col in range(8):
-                if piece.is_legal_move(position, (col, row), self.board):
+                if piece.is_legal_move(position, (col, row), self.board, self.last_move):
                     # Temporarily make the move
                     original_piece = self.board[row][col]
                     self.board[row][col] = piece
@@ -145,6 +148,18 @@ class Board:
                         )
                     else:
                         in_check = self.is_in_check(piece.color)
+
+                    # En passant logic for Pawns
+                    if not in_check and isinstance(piece, Pawn) and self.last_move:
+                        last_piece = self.last_move['piece']
+                        last_start_pos = self.last_move['start_pos']
+                        last_end_pos = self.last_move['end_pos']
+                        if last_piece.piece_type.lower() == 'p' and abs(last_start_pos[1] - last_end_pos[1]) == 2:
+                            if (piece.color == 'w' and position[1] == 3) or (piece.color == 'b' and position[1] == 4):
+                                # Check if the last move ended beside the current pawn
+                                if abs(position[0] - last_end_pos[0]) == 1 and last_end_pos[1] == position[1]:
+                                    en_passant_capture_pos = (last_end_pos[0], position[1] + (1 if piece.color == 'b' else -1))
+                                    legal_moves.append(en_passant_capture_pos)
 
                     # Additional Castling Logic for King
                     if is_king and not piece.moved and not self.is_in_check(piece.color):
@@ -175,6 +190,3 @@ class Board:
                     self.board[row][col] = original_piece
 
         return legal_moves
-
-if __name__ == "__main__":
-    board = Board()

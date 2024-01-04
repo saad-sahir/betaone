@@ -4,14 +4,14 @@ from piece import Pawn, Rook, King, Knight, Queen, Bishop
 
 class Board:
 
-    def __init__(self, fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", turn="w", print=False):
+    def __init__(self, fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", turn="w", print=False, last_move = None):
         self._print = print
         self.current_turn = turn # 'w' for white, 'b' for black
         self.fen = fen
         self.board = [[None for _ in range(8)] for _ in range(8)]  # 8x8 grid for chess pieces
         self.set_positions_from_FEN(fen)
         self.selected_piece = None 
-        self.last_move = None
+        self.last_move = last_move
 
     ## Helper Functions
 
@@ -91,7 +91,7 @@ class Board:
                 if piece and piece.color == king_color:
                     for row in range(8):
                         for col in range(8):
-                            if piece.is_legal_move((x, y), (col, row), self.board):
+                            if piece.is_legal_move((x, y), (col, row), self.board, self.last_move):
                                 self.board[y][x] = None
                                 temp_piece = self.board[row][col]
                                 self.board[row][col] = piece

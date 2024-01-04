@@ -84,7 +84,7 @@ def handle_mouse_click(pos, board, _, square_size):
             # En passant capture logic
             if isinstance(moving_piece, Pawn):
                 if abs(current_position[1] - new_position[1]) == 1 and current_position[0] != new_position[0] and not clicked_square:
-                    capture_row = current_position[1] if moving_piece.color == 'w' else new_position[1]
+                    capture_row = current_position[1]
                     board.board[capture_row][new_position[0]] = None  # Remove the captured pawn
 
             # Place the moving piece in the new position
